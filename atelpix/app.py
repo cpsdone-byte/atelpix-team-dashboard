@@ -38,10 +38,7 @@ class App(tk.Tk):
         return tk.Button(parent,text=text,command=cmd,bg=ORANGE if primary else PANEL2,fg='white',activebackground='#ef7a16',activeforeground='white',relief='flat',bd=0,padx=14,pady=9,cursor='hand2',font=('Segoe UI',9,'bold'))
 
     def show_setup_or_login(self):
-        messagebox.showinfo(
-            'Atelpix data location',
-            f'Database path:\n{self.store.path}\n\nDatabase exists: {self.store.initialized}'
-        )
+        # Start directly at password login; do not show an informational popup.
         if self.store.initialized:
             self.show_login()
         else:
@@ -80,34 +77,8 @@ class App(tk.Tk):
             try: self.store.unlock(p.get())
             except Exception as e: messagebox.showerror('Login failed',str(e)); return
             self.unlocked=True; self.time_format=self.store.meta('time_format') or '24h'; self.show_main(); self.check_backup_due(); self.tick()
-        def reset_authenticator():
-            password=p.get()
-            if not password:
-                messagebox.showwarning('Owner password required','Enter your Owner password first.')
-                return
-            try:
-                self.store.unlock(password)
-            except Exception as e:
-                messagebox.showerror('Verification failed',str(e))
-                return
-            if not messagebox.askyesno('Reset Authenticator','This will replace the lost Authenticator setup and invalidate all old recovery codes. Your client database will be backed up first. Continue?'):
-                self.store.close()
-                return
-            try:
-                folder=APP_DIR/'Backups'
-                folder.mkdir(parents=True,exist_ok=True)
-                backup_path=folder/f'Atelpix_Before_Authenticator_Reset_{datetime.now():%Y%m%d_%H%M%S}.atbak'
-                self.store.backup(backup_path)
-                secret,codes=self.store.reset_authenticator()
-                messagebox.showinfo('Authenticator reset','Backup created at:\\n'+str(backup_path)+'\\n\\nAdd this new secret to your Authenticator App:\\n\\n'+secret+'\\n\\nSave these new one-time recovery codes securely:\\n\\n'+'\\n'.join(codes)+'\\n\\nThe old Authenticator code and recovery codes will no longer work.')
-                self.store.close()
-                self.show_login()
-            except Exception as e:
-                try: self.store.close()
-                except Exception: pass
-                messagebox.showerror('Reset failed','Authenticator reset could not be completed.\\n\\n'+str(e))
         self.btn(c,'UNLOCK DASHBOARD',proceed,True).pack(fill='x')
-        self.label(c,'Forgot password? There is no cloud reset. Use a valid recovery plan and keep your backups safe.',8,MUTED,wraplength=330).pack(pady=(14,0))
+        self.label(c,'Enter your Owner password to open your dashboard.',8,MUTED,wraplength=330).pack(pady=(14,0))
 
     def show_main(self):
         self.clear(); self.configure(bg=BG)
