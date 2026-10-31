@@ -82,6 +82,16 @@ class LocalStore:
             self.conn.execute('INSERT INTO audit(at,event,detail) VALUES(?,?,?)',(datetime.now(timezone.utc).isoformat(),event,detail))
             if event not in ('OWNER_LOGIN',): self._save()
 
+    def reset_authenticator(self):
+        """Replace the Owner TOTP secret after password re-authentication."""
+        self._require()
+        secret = totp_secret()
+        self.set_meta('totp_secret', secret)
+        codes = self.generate_recovery_codes()
+        self.audit('AUTHENTICATOR_RESET','Authenticator replaced after Owner password verification')
+        self._save()
+        return secret, codes
+
     def verify_second_factor(self, code: str, recovery: bool=False) -> bool:
         self._require()
         if recovery:
