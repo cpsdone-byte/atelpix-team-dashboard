@@ -111,7 +111,7 @@ class App(tk.Tk):
             except Exception as e:
                 try: self.store.close()
                 except Exception: pass
-                messagebox.showerror('Reset failed','Authenticator reset could not be completed. Your existing database has not been intentionally replaced.\\n\\n'+str(e))
+                messagebox.showerror('Reset failed','Authenticator reset could not be completed.\\n\\n'+str(e))
         self.btn(c,'UNLOCK DASHBOARD',proceed,True).pack(fill='x')
         self.btn(c,'RESET AUTHENTICATOR (OWNER PASSWORD)',reset_authenticator).pack(fill='x',pady=(8,0))
         self.label(c,'Forgot password? There is no cloud reset. Use a valid recovery plan and keep your backups safe.',8,MUTED,wraplength=330).pack(pady=(14,0))
