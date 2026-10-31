@@ -65,26 +65,20 @@ class App(tk.Tk):
         def create():
             if p.get()!=p2.get(): messagebox.showerror('Setup','Passwords do not match.'); return
             try:
-                secret=self.store.setup(p.get()); codes=self.store.generate_recovery_codes()
+                self.store.setup(p.get())
                 self.store.set_meta('security_email',em.get().strip())
-                uri=f'otpauth://totp/Atelpix:Owner?secret={secret}&issuer=Atelpix&algorithm=SHA1&digits=6&period=30'
-                messagebox.showinfo('Authenticator setup',f'Add this secret manually in your Authenticator App:\n\n{secret}\n\nAccount URI:\n{uri}\n\nSave these one-time recovery codes securely now:\n\n'+'\n'.join(codes)+'\n\nThey will not be shown again.')
+                messagebox.showinfo('Setup complete','Owner account created. Sign in using your Owner password.')
                 self.store.close(); self.show_login()
             except Exception as e: messagebox.showerror('Setup failed',str(e))
         self.btn(c,'CREATE OWNER ACCOUNT',create,True).pack(fill='x')
         self.label(c,'No network connection or online account is used.',8,MUTED).pack(pady=(15,0))
 
     def show_login(self):
-        c=self.auth_shell('Owner Login','Encrypted local database · Offline')
+        c=self.auth_shell('Owner Login','Encrypted local database · Password protected')
         self.label(c,'Owner password',9,MUTED).pack(anchor='w'); p=self.entry(c,show='●'); p.pack(fill='x',pady=(5,15),ipady=8)
         def proceed():
             try: self.store.unlock(p.get())
             except Exception as e: messagebox.showerror('Login failed',str(e)); return
-            code=simpledialog.askstring('Two-factor authentication','Enter your 6-digit Authenticator code.\\nFor recovery, enter a one-time recovery code.',parent=self)
-            if not code: self.store.close(); return
-            recovery='-' in code or len(''.join(x for x in code if x.isalnum()))>6
-            if not self.store.verify_second_factor(code,recovery):
-                messagebox.showerror('Verification failed','Invalid or already-used verification code.'); self.store.close(); self.show_login(); return
             self.unlocked=True; self.time_format=self.store.meta('time_format') or '24h'; self.show_main(); self.check_backup_due(); self.tick()
         def reset_authenticator():
             password=p.get()
@@ -113,7 +107,6 @@ class App(tk.Tk):
                 except Exception: pass
                 messagebox.showerror('Reset failed','Authenticator reset could not be completed.\\n\\n'+str(e))
         self.btn(c,'UNLOCK DASHBOARD',proceed,True).pack(fill='x')
-        self.btn(c,'RESET AUTHENTICATOR (OWNER PASSWORD)',reset_authenticator).pack(fill='x',pady=(8,0))
         self.label(c,'Forgot password? There is no cloud reset. Use a valid recovery plan and keep your backups safe.',8,MUTED,wraplength=330).pack(pady=(14,0))
 
     def show_main(self):
@@ -157,7 +150,7 @@ class App(tk.Tk):
             v=self.label(line,'--:--',12,ORANGE,True,bg=PANEL); v.pack(side='right'); self.clock_labels.append((v,tz))
         right=self.panel(mid,padx=18,pady=16); right.pack(side='left',fill='both',expand=True,padx=(10,0))
         self.label(right,'SECURITY & BACKUP',9,ORANGE,True).pack(anchor='w')
-        for t in ['Encrypted local database','Password + Authenticator 2FA','Single Owner account','No network / cloud features','Backups stored locally only']:
+        for t in ['Encrypted local database','Owner password login','Single Owner account','No network / cloud features','Backups stored locally only']:
             self.label(right,'✓  '+t,9,GREEN,bg=PANEL).pack(anchor='w',pady=8)
         self.btn(right,'BACKUP NOW',self.backup_now,True).pack(anchor='w',pady=(12,0))
         self.label(self.main,'Recent activity',12,TEXT,True,bg=BG).pack(anchor='w')
@@ -255,7 +248,6 @@ class App(tk.Tk):
         self.btn(box2,'START / VIEW TEAM LAN ACCESS',self.team_lan_access,True).pack(anchor='w',pady=8)
         self.btn(box2,'STOP TEAM LAN ACCESS',self.stop_team_lan).pack(anchor='w')
         self.btn(box2,'CHANGE OWNER PASSWORD',self.change_password).pack(anchor='w',pady=8)
-        self.btn(box2,'REGENERATE RECOVERY CODES',self.regen_codes).pack(anchor='w')
         box3=self.panel(self.main,padx=18,pady=16); box3.pack(fill='x',pady=7)
         self.label(box3,'PREFERENCES & BACKUP',10,ORANGE,True).pack(anchor='w')
         fmt=ttk.Combobox(box3,values=['12h','24h'],state='readonly',width=8); fmt.set(self.time_format); fmt.pack(anchor='w',pady=7)
