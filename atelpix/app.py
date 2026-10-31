@@ -182,3 +182,225 @@ class App(tk.Tk):
         self.label(box3,str(APP_DIR/'Backups'),8,MUTED,bg=PANEL).pack(anchor='w',pady=8)
         self.btn(box3,'OPEN DATA FOLDER',lambda:os.startfile(APP_DIR) if os.name=='nt' else messagebox.showinfo('Data folder',str(APP_DIR))).pack(anchor='w')
 \n
+
+
+    # --- Missing application workflows restored in the final desktop build ---
+    def close_app(self):
+        try:
+            if self.lan_server:
+                self.lan_server.stop()
+                self.lan_server = None
+            if self.store.conn is not None:
+                self.store.close()
+        except Exception as exc:
+            messagebox.showerror('Close failed', str(exc))
+        self.destroy()
+
+    def lock(self):
+        if self.lan_server:
+            try: self.lan_server.stop()
+            except Exception: pass
+            self.lan_server = None
+        try:
+            if self.store.conn is not None: self.store.close()
+        finally:
+            self.unlocked = False
+            self.show_login()
+
+    def check_backup_due(self):
+        # No startup popup: the Backup page always shows the current backup location.
+        return self.store.backup_due()
+
+    def tick(self):
+        if not self.winfo_exists() or not self.unlocked: return
+        if time.monotonic() - self.last_activity > 15 * 60:
+            messagebox.showinfo('Session locked', 'Your dashboard was locked after 15 minutes of inactivity.')
+            self.lock()
+            return
+        for widget, tz in getattr(self, 'clock_labels', []):
+            try: widget.configure(text=datetime.now(ZoneInfo(tz)).strftime('%H:%M:%S'))
+            except Exception: widget.configure(text='--:--:--')
+        self.after(1000, self.tick)
+
+    def load_logo(self):
+        try:
+            from PIL import Image, ImageTk
+            image = Image.open(LOGO_PATH).convert('RGBA')
+            image.thumbnail((145, 58))
+            self.logo_img = ImageTk.PhotoImage(image)
+            self.logo_label.configure(image=self.logo_img, text='')
+        except Exception:
+            # A missing or invalid optional logo must never prevent startup.
+            self.logo_img = None
+
+    def clients_page(self):
+        self.page_head('Client Management', 'Add, search, update and organize your client records.')
+        toolbar = tk.Frame(self.main, bg=BG); toolbar.pack(fill='x', pady=(0, 12))
+        search = self.entry(toolbar); search.pack(side='left', fill='x', expand=True, padx=(0, 8))
+        search.insert(0, 'Search name, country, city, email or phone')
+        status = ttk.Combobox(toolbar, values=['All','Active','Prospect','Inactive'], state='readonly', width=13)
+        status.set('All'); status.pack(side='left', padx=5)
+        body = self.panel(self.main, padx=10, pady=10); body.pack(fill='both', expand=True)
+        cols = ('id','name','country','city','email','phone','status')
+        tree = ttk.Treeview(body, columns=cols, show='headings')
+        widths = {'id':45,'name':180,'country':110,'city':110,'email':190,'phone':120,'status':90}
+        for col in cols:
+            tree.heading(col, text=col.upper()); tree.column(col, width=widths[col], anchor='w')
+        tree.pack(fill='both', expand=True)
+        def refresh(*_):
+            tree.delete(*tree.get_children())
+            for row in self.store.list_clients(search.get() if not search.get().startswith('Search name') else '', status.get()):
+                tree.insert('', 'end', iid=str(row[0]), values=(row[0],row[1],row[2],row[3],row[5],row[7],row[10]))
+        def selected_id():
+            chosen = tree.selection()
+            if not chosen:
+                messagebox.showwarning('Select client','Please select a client record first.')
+                return None
+            return int(chosen[0])
+        def edit():
+            cid=selected_id()
+            if cid is not None: self.client_form(cid, refresh)
+        def delete():
+            cid=selected_id()
+            if cid is None: return
+            if messagebox.askyesno('Delete client','Delete the selected client record? This cannot be undone.'):
+                self.store.delete_client(cid); refresh()
+        actions=tk.Frame(self.main,bg=BG); actions.pack(fill='x',pady=(10,0))
+        self.btn(actions,'ADD CLIENT',lambda:self.client_form(None,refresh),True).pack(side='left')
+        self.btn(actions,'EDIT SELECTED',edit).pack(side='left',padx=7)
+        self.btn(actions,'DELETE SELECTED',delete).pack(side='left')
+        self.btn(actions,'REFRESH',refresh).pack(side='right')
+        search.bind('<KeyRelease>', refresh); status.bind('<<ComboboxSelected>>', refresh)
+        tree.bind('<Double-1>', lambda _e: edit())
+        refresh()
+
+    def client_form(self, client_id=None, on_saved=None):
+        existing = None
+        if client_id is not None:
+            existing = self.store.conn.execute('SELECT * FROM clients WHERE id=?',(client_id,)).fetchone()
+            if not existing: messagebox.showerror('Client','Selected client no longer exists.'); return
+        win=tk.Toplevel(self); win.title('Edit Client' if existing else 'Add Client'); win.configure(bg=BG)
+        win.transient(self); win.grab_set(); win.geometry('560x680')
+        outer=tk.Frame(win,bg=BG,padx=22,pady=18); outer.pack(fill='both',expand=True)
+        self.label(outer,'Edit Client Record' if existing else 'New Client Record',17,TEXT,True,bg=BG).pack(anchor='w',pady=(0,12))
+        values = {}
+        for key, caption in FIELDS:
+            self.label(outer,caption,9,MUTED,bg=BG).pack(anchor='w',pady=(6,2))
+            if key == 'status':
+                widget=ttk.Combobox(outer,values=['Active','Prospect','Inactive'],state='readonly')
+                widget.set((existing[10] if existing else 'Active') or 'Active')
+            elif key == 'notes':
+                widget=tk.Text(outer,height=3,bg=PANEL2,fg=TEXT,insertbackground=TEXT,relief='flat')
+                if existing and existing[9]: widget.insert('1.0',existing[9])
+            else:
+                widget=self.entry(outer)
+                index={'name':1,'country':2,'city':3,'timezone':4,'email':5,'whatsapp':6,'phone':7,'website':8}[key]
+                if existing and existing[index]: widget.insert(0,existing[index])
+                elif key=='timezone': widget.insert(0,'UTC')
+            widget.pack(fill='x',ipady=5 if key!='notes' else 0)
+            values[key]=widget
+        def save():
+            data={}
+            for key, widget in values.items():
+                data[key]=widget.get('1.0','end-1c').strip() if key=='notes' else widget.get().strip()
+            try:
+                self.store.save_client(data,client_id)
+                if on_saved: on_saved()
+                win.destroy()
+            except Exception as exc: messagebox.showerror('Save client',str(exc),parent=win)
+        self.btn(outer,'SAVE CLIENT',save,True).pack(fill='x',pady=15)
+
+    def clocks_page(self):
+        self.page_head('World Clocks','Manage the time zones shown in your workspace.')
+        box=self.panel(self.main,padx=14,pady=14); box.pack(fill='x')
+        tree=ttk.Treeview(box,columns=('city','country','timezone'),show='headings',height=10)
+        for c,w in [('city',180),('country',180),('timezone',260)]:
+            tree.heading(c,text=c.upper()); tree.column(c,width=w,anchor='w')
+        tree.pack(fill='x')
+        def refresh():
+            tree.delete(*tree.get_children())
+            for row in self.store.clocks(): tree.insert('','end',iid=str(row[0]),values=row[1:])
+        def add():
+            city=simpledialog.askstring('Add clock','City name:',parent=self)
+            if not city: return
+            country=simpledialog.askstring('Add clock','Country:',parent=self) or ''
+            tz=simpledialog.askstring('Add clock','IANA time zone (e.g. Europe/Paris):',parent=self)
+            if not tz: return
+            try: self.store.add_clock(city,country,tz); refresh()
+            except Exception as exc: messagebox.showerror('Add clock',str(exc))
+        def remove():
+            chosen=tree.selection()
+            if not chosen: messagebox.showwarning('Remove clock','Select a clock first.'); return
+            self.store.delete_clock(int(chosen[0])); refresh()
+        actions=tk.Frame(self.main,bg=BG); actions.pack(fill='x',pady=10)
+        self.btn(actions,'ADD TIME ZONE',add,True).pack(side='left')
+        self.btn(actions,'REMOVE SELECTED',remove).pack(side='left',padx=8)
+        refresh()
+
+    def activity_page(self):
+        self.page_head('Activity Log','Recent actions recorded in your encrypted local database.')
+        box=self.panel(self.main,padx=10,pady=10); box.pack(fill='both',expand=True)
+        tree=ttk.Treeview(box,columns=('time','event','detail'),show='headings')
+        for c,w in [('time',210),('event',190),('detail',430)]:
+            tree.heading(c,text=c.upper()); tree.column(c,width=w,anchor='w')
+        tree.pack(fill='both',expand=True)
+        for at,event,detail in self.store.audit_events(250):
+            tree.insert('','end',values=(at.replace('T',' ')[:19],event,detail))
+
+    def settings_page(self):
+        self.page_head('Settings','Owner security, local storage and optional team access.')
+        account=self.panel(self.main,padx=16,pady=14); account.pack(fill='x',pady=(0,12))
+        self.label(account,'OWNER PASSWORD',11,ORANGE,True).pack(anchor='w')
+        self.label(account,'Change the password used to unlock this encrypted database.',9,MUTED).pack(anchor='w',pady=7)
+        def change_password():
+            old=simpledialog.askstring('Change password','Current Owner password:',show='●',parent=self)
+            if old is None: return
+            new=simpledialog.askstring('Change password','New password (minimum 12 characters):',show='●',parent=self)
+            if new is None: return
+            confirm=simpledialog.askstring('Change password','Confirm new password:',show='●',parent=self)
+            if confirm is None: return
+            if new!=confirm: messagebox.showerror('Password','New passwords do not match.'); return
+            try: self.store.change_password(old,new); messagebox.showinfo('Password','Owner password updated.')
+            except Exception as exc: messagebox.showerror('Password',str(exc))
+        self.btn(account,'CHANGE OWNER PASSWORD',change_password,True).pack(anchor='w',pady=5)
+        lan=self.panel(self.main,padx=16,pady=14); lan.pack(fill='x',pady=(0,12))
+        self.label(lan,'OPTIONAL TEAM READ-ONLY ACCESS',11,ORANGE,True).pack(anchor='w')
+        self.label(lan,'Only use on a trusted private Wi-Fi/LAN. Team access exposes client details to connected viewers.',9,MUTED,bg=PANEL,wraplength=720).pack(anchor='w',pady=8)
+        def start_lan():
+            try:
+                if not self.lan_server: self.lan_server=LANReadOnlyServer(self.store)
+                info=self.lan_server.start()
+                messagebox.showinfo('Team LAN Access',f"URL: {info['url']}\n\nAccess token:\n{info['token']}\n\nCertificate SHA-256:\n{info['fingerprint']}\n\nShare only with authorized team members over a trusted channel.")
+            except Exception as exc: messagebox.showerror('Team LAN Access',str(exc))
+        def stop_lan():
+            if self.lan_server:
+                self.lan_server.stop(); self.lan_server=None
+                messagebox.showinfo('Team LAN Access','Team access stopped. The previous token is no longer valid.')
+        self.btn(lan,'START / VIEW TEAM LAN ACCESS',start_lan,True).pack(anchor='w',pady=5)
+        self.btn(lan,'STOP TEAM LAN ACCESS',stop_lan).pack(anchor='w',pady=5)
+        storage=self.panel(self.main,padx=16,pady=14); storage.pack(fill='x')
+        self.label(storage,'LOCAL DATA FILE',10,TEXT,True).pack(anchor='w')
+        self.label(storage,str(APP_DIR/'clients.atdb'),8,MUTED,bg=PANEL).pack(anchor='w',pady=7)
+        self.btn(storage,'OPEN DATA FOLDER',lambda:os.startfile(APP_DIR) if os.name=='nt' else messagebox.showinfo('Data folder',str(APP_DIR))).pack(anchor='w')
+
+    def backup_now(self):
+        try:
+            folder=APP_DIR/'Backups'; folder.mkdir(parents=True,exist_ok=True)
+            path=folder/f"Atelpix-Backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.atbak"
+            self.store.backup(path)
+            messagebox.showinfo('Backup complete',f'Encrypted backup saved to:\n{path}')
+        except Exception as exc: messagebox.showerror('Backup failed',str(exc))
+
+    def restore_backup(self):
+        source=filedialog.askopenfilename(parent=self,title='Select Atelpix encrypted backup',filetypes=[('Atelpix backup','*.atbak'),('All files','*.*')])
+        if not source: return
+        backup_password=simpledialog.askstring('Restore backup','Password used when this backup was created:',show='●',parent=self)
+        if backup_password is None: return
+        current_password=simpledialog.askstring('Restore backup','Current Owner password:',show='●',parent=self)
+        if current_password is None: return
+        if not messagebox.askyesno('Confirm restore','This replaces the current client data. Continue?',parent=self): return
+        try:
+            self.store.restore(Path(source),backup_password,current_password)
+            messagebox.showinfo('Restore complete','Backup restored successfully. The dashboard will refresh.')
+            self.dashboard()
+        except Exception as exc: messagebox.showerror('Restore failed',str(exc))
