@@ -56,7 +56,7 @@ class LocalStore:
         self.failures = 0; self.password = password
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.deserialize(raw)
-        self.audit('OWNER_LOGIN','Password accepted; second factor pending')
+        self.audit('OWNER_LOGIN','Password-only Owner login accepted')
 
     def close(self):
         if self.conn:
