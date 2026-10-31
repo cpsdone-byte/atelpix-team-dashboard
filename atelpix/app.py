@@ -80,13 +80,40 @@ class App(tk.Tk):
         def proceed():
             try: self.store.unlock(p.get())
             except Exception as e: messagebox.showerror('Login failed',str(e)); return
-            code=simpledialog.askstring('Two-factor authentication','Enter your 6-digit Authenticator code.\nFor recovery, enter a one-time recovery code.',parent=self)
+            code=simpledialog.askstring('Two-factor authentication','Enter your 6-digit Authenticator code.\\nFor recovery, enter a one-time recovery code.',parent=self)
             if not code: self.store.close(); return
             recovery='-' in code or len(''.join(x for x in code if x.isalnum()))>6
             if not self.store.verify_second_factor(code,recovery):
                 messagebox.showerror('Verification failed','Invalid or already-used verification code.'); self.store.close(); self.show_login(); return
             self.unlocked=True; self.time_format=self.store.meta('time_format') or '24h'; self.show_main(); self.check_backup_due(); self.tick()
+        def reset_authenticator():
+            password=p.get()
+            if not password:
+                messagebox.showwarning('Owner password required','Enter your Owner password first.')
+                return
+            try:
+                self.store.unlock(password)
+            except Exception as e:
+                messagebox.showerror('Verification failed',str(e))
+                return
+            if not messagebox.askyesno('Reset Authenticator','This will replace the lost Authenticator setup and invalidate all old recovery codes. Your client database will be backed up first. Continue?'):
+                self.store.close()
+                return
+            try:
+                folder=APP_DIR/'Backups'
+                folder.mkdir(parents=True,exist_ok=True)
+                backup_path=folder/f'Atelpix_Before_Authenticator_Reset_{datetime.now():%Y%m%d_%H%M%S}.atbak'
+                self.store.backup(backup_path)
+                secret,codes=self.store.reset_authenticator()
+                messagebox.showinfo('Authenticator reset','Backup created at:\\n'+str(backup_path)+'\\n\\nAdd this new secret to your Authenticator App:\\n\\n'+secret+'\\n\\nSave these new one-time recovery codes securely:\\n\\n'+'\\n'.join(codes)+'\\n\\nThe old Authenticator code and recovery codes will no longer work.')
+                self.store.close()
+                self.show_login()
+            except Exception as e:
+                try: self.store.close()
+                except Exception: pass
+                messagebox.showerror('Reset failed','Authenticator reset could not be completed. Your existing database has not been intentionally replaced.\\n\\n'+str(e))
         self.btn(c,'UNLOCK DASHBOARD',proceed,True).pack(fill='x')
+        self.btn(c,'RESET AUTHENTICATOR (OWNER PASSWORD)',reset_authenticator).pack(fill='x',pady=(8,0))
         self.label(c,'Forgot password? There is no cloud reset. Use a valid recovery plan and keep your backups safe.',8,MUTED,wraplength=330).pack(pady=(14,0))
 
     def show_main(self):
