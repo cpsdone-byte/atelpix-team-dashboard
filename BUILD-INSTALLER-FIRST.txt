@@ -1,0 +1,14 @@
+ATELPIX WINDOWS INSTALLER BUILD
+
+This package does not contain a prebuilt Windows installer.
+To create the real Setup.exe:
+1. Extract this ZIP on a Windows 10/11 x64 PC.
+2. Install Python 3.11+ (enable Add Python to PATH).
+3. Install Inno Setup 6.
+4. Double-click MAKE-INSTALLER-WINDOWS.bat.
+5. The installer will be created at:
+   installer-output\Atelpix-Secure-Client-Dashboard-Setup.exe
+
+The build must be run on Windows. This ChatGPT build environment is Linux,
+so it cannot produce or validate a genuine Windows EXE here.
+Before using real client data, test on all target PCs and review SECURITY-TEST-REPORT.md.

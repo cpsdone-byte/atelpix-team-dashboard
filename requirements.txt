@@ -1,0 +1,5 @@
+argon2-cffi==25.1.0
+cryptography>=44.0.0,<47
+Pillow>=11.0.0,<13
+tzdata>=2025.1
+pyinstaller>=6.10,<7
