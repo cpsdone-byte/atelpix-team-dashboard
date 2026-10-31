@@ -1,7 +1,7 @@
 # Atelpix Secure Client Dashboard — LAN Team Edition
 
 Windows desktop application with two launch modes in one executable:
-- Owner Dashboard: full local client management, encrypted local database, password + TOTP/recovery authentication.
+- Owner Dashboard: full local client management, encrypted local database, Owner Password login (no OTP).
 - Team Viewer (`--team` shortcut): read-only client list and world clock, polling every 5 seconds.
 
 ## Network design
@@ -15,7 +15,7 @@ Windows desktop application with two launch modes in one executable:
 ## Build / install
 A GitHub Actions workflow is included at `.github/workflows/build-windows-installer.yml`. Upload this source to a private GitHub repository, then run **Actions → Build Atelpix Windows Installer → Run workflow**. The workflow builds the self-contained Windows app and compiles `Atelpix-Secure-Client-Dashboard-Setup.exe` on a Windows runner. See `WINDOWS-INSTALLER-BUILD-NO-LOCAL-PYTHON.md`. End-user PCs do not need Python or Inno Setup.
 
-The current ChatGPT execution environment is Linux and has no Windows build runner or Inno Setup compiler. Therefore the actual Windows `.exe` has not been generated or validated here. The ZIP is a build package, not an installer.
+The Windows installer is compiled by the repository's GitHub Actions workflow. A successful build confirms packaging, while actual operation must still be verified on the target Windows PC.
 
 ## LAN setup
 1. Install the same setup on Owner PC and both Team PCs.
