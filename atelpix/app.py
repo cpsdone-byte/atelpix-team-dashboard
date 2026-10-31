@@ -37,7 +37,7 @@ class App(tk.Tk):
     def btn(self,parent,text,cmd,primary=False):
         return tk.Button(parent,text=text,command=cmd,bg=ORANGE if primary else PANEL2,fg='white',activebackground='#ef7a16',activeforeground='white',relief='flat',bd=0,padx=14,pady=9,cursor='hand2',font=('Segoe UI',9,'bold'))
 
-        def show_setup_or_login(self):
+    def show_setup_or_login(self):
         messagebox.showinfo(
             'Atelpix data location',
             f'Database path:\n{self.store.path}\n\nDatabase exists: {self.store.initialized}'
