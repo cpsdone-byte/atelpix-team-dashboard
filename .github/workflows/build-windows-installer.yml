@@ -34,7 +34,10 @@ jobs:
 
       - name: Build application
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "Atelpix Secure Dashboard" --collect-all cryptography --collect-all argon2 --collect-all PIL --hidden-import zoneinfo main.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "Atelpix Secure Dashboard" --paths . --collect-submodules atelpix --collect-all cryptography --collect-all argon2 --collect-all PIL --hidden-import atelpix --hidden-import atelpix.app --hidden-import atelpix.team_viewer --hidden-import zoneinfo main.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -c "import atelpix.app, atelpix.team_viewer; print('Atelpix package imports OK')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
