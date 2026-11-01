@@ -59,6 +59,9 @@ class WorldClockApp:
         self.use_24h = True
         self.cards = []
         self.pulse = 0
+        # The canvas creates its animated dot on its first Configure event.
+        # Initialize the id first because the animation timer starts immediately.
+        self.live_dot = None
         self._style()
         self._build()
         self.render_cards()
@@ -115,12 +118,10 @@ class WorldClockApp:
         h = 164
         for x in range(w):
             c.create_line(x, 0, x, h, fill=mix("#10162B", "#142C43", x/max(w-1, 1)))
-        # Decorative rings and flowing accent strokes
         c.create_oval(w-245, -155, w+55, 145, outline="#254565", width=2)
         c.create_oval(w-200, -118, w+10, 92, outline="#28516A", width=1)
         c.create_line(0, 158, w, 158, fill="#26385B", width=1)
 
-        # Dedicated company logo space: replace this framed area with the ATELPIX logo later.
         c.create_rectangle(28, 25, 166, 137, outline="#3B5A80", width=2, dash=(5, 4))
         c.create_text(97, 72, text="YOUR LOGO", fill="#B7C7E7",
                       font=("Segoe UI", 12, "bold"))
@@ -144,8 +145,9 @@ class WorldClockApp:
     def animate_header(self):
         self.pulse = (self.pulse + 1) % 40
         if self.header.winfo_exists():
-            color = mix("#1B5364", CYAN, abs(20-self.pulse)/20)
-            self.header.itemconfigure(self.live_dot, fill=color)
+            if self.live_dot is not None:
+                color = mix("#1B5364", CYAN, abs(20-self.pulse)/20)
+                self.header.itemconfigure(self.live_dot, fill=color)
             self.root.after(70, self.animate_header)
 
     def _button(self, parent, text, command, color, dark_text=False):
@@ -188,7 +190,6 @@ class WorldClockApp:
             top.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
             top.bind("<Leave>", lambda e, f=card: self.card_hover(f, False))
 
-            # Larger, prominent country/city name
             name = tk.Label(top, text=city.upper(), bg=PANEL, fg=WHITE,
                             font=("Segoe UI", 16, "bold"))
             name.pack(side="left")
