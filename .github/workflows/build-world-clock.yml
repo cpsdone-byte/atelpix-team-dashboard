@@ -31,7 +31,7 @@ jobs:
 
       - name: Build standalone Windows executable
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name ATELPIX-World-Clock --collect-all tzdata app.py
+          pyinstaller --noconfirm --clean --onefile --windowed --name ATELPIX-World-Clock --collect-all tzdata --collect-all PIL app.py
 
       - name: Package app and quick-start guide
         shell: pwsh
