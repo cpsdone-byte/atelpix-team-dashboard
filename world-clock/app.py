@@ -86,65 +86,76 @@ class WorldClockApp:
                   foreground=[("readonly", WHITE)])
 
     def _build(self):
-        self.header = tk.Canvas(self.root, height=164, bg=BG, highlightthickness=0)
+        # Premium dashboard shell
+        shell = tk.Frame(self.root, bg=BG)
+        shell.pack(fill="both", expand=True, padx=26, pady=20)
+
+        self.header = tk.Canvas(shell, height=178, bg=BG, highlightthickness=0)
         self.header.pack(fill="x")
         self.header.bind("<Configure>", self.draw_header)
 
-        body = tk.Frame(self.root, bg=BG)
-        body.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+        body = tk.Frame(shell, bg=BG)
+        body.pack(fill="both", expand=True, pady=(18, 0))
 
         top = tk.Frame(body, bg=BG)
-        top.pack(fill="x", pady=(2, 15))
-        tk.Label(top, text="WORLD TIME DASHBOARD", bg=BG, fg=WHITE,
-                 font=("Segoe UI", 14, "bold")).pack(side="left")
-        self.city_count = tk.Label(top, text="", bg=BG, fg=CYAN,
-                                   font=("Segoe UI", 10, "bold"))
-        self.city_count.pack(side="left", padx=13)
+        top.pack(fill="x", pady=(0, 16))
+        heading = tk.Frame(top, bg=BG)
+        heading.pack(side="left", fill="y")
+        tk.Label(heading, text="YOUR WORLD, AT A GLANCE", bg=BG, fg=MUTED,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        title = tk.Label(heading, text="Global Time Dashboard", bg=BG, fg=WHITE,
+                         font=("Segoe UI", 20, "bold"))
+        title.pack(anchor="w", pady=(3, 0))
+        self.city_count = tk.Label(heading, text="", bg=BG, fg=CYAN,
+                                   font=("Segoe UI", 9, "bold"))
+        self.city_count.pack(anchor="w", pady=(4, 0))
 
         actions = tk.Frame(top, bg=BG)
-        actions.pack(side="right")
+        actions.pack(side="right", anchor="center", pady=8)
         self.format_btn = self._button(actions, "24H FORMAT", self.toggle_format, BLUE)
-        self.format_btn.pack(side="left", padx=(0, 10))
-        self._button(actions, "LOGO SETTINGS", self.logo_settings, PURPLE).pack(side="left", padx=(0, 10))
+        self.format_btn.pack(side="left", padx=(0, 9))
+        self._button(actions, "LOGO SETTINGS", self.logo_settings, PURPLE).pack(side="left", padx=(0, 9))
         self._button(actions, "+ ADD CITY", self.add_city, CYAN, True).pack(side="left")
 
         self.grid = tk.Frame(body, bg=BG)
         self.grid.pack(fill="both", expand=True)
 
         footer = tk.Frame(body, bg=BG)
-        footer.pack(fill="x", pady=(13, 0))
-        tk.Label(footer, text="● LIVE TIME  •  AUTOMATIC DAYLIGHT-SAVING ADJUSTMENT",
+        footer.pack(fill="x", pady=(14, 0))
+        tk.Label(footer, text="●  LIVE GLOBAL TIME     •     AUTOMATIC DAYLIGHT-SAVING",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8, "bold")).pack(side="left")
         tk.Label(footer, text="ATELPIX  /  WHERE PIXELS BECOME ART",
-                 bg=BG, fg=CYAN, font=("Segoe UI", 9, "bold")).pack(side="right")
+                 bg=BG, fg=CYAN, font=("Segoe UI", 8, "bold")).pack(side="right")
 
     def draw_header(self, event=None):
         c = self.header
         c.delete("all")
         w = max(c.winfo_width(), 800)
-        h = 164
+        h = 178
         for x in range(w):
-            c.create_line(x, 0, x, h, fill=mix("#10162B", "#142C43", x/max(w-1, 1)))
-        c.create_oval(w-245, -155, w+55, 145, outline="#254565", width=2)
-        c.create_oval(w-200, -118, w+10, 92, outline="#28516A", width=1)
-        c.create_line(0, 158, w, 158, fill="#26385B", width=1)
+            c.create_line(x, 0, x, h, fill=mix("#10172D", "#172F49", x/max(w-1, 1)))
+        c.create_oval(w-285, -190, w+70, 165, outline="#244764", width=2)
+        c.create_oval(w-238, -145, w+20, 113, outline="#294D69", width=1)
+        c.create_oval(w-196, -103, w-24, 69, outline="#285A70", width=1)
+        c.create_line(0, h-2, w, h-2, fill="#2B4565", width=1)
 
+        # Brand tile with a subtle luminous frame
+        c.create_rectangle(18, 20, 166, 154, fill="#111D34", outline="#3A5B7B", width=2)
+        c.create_rectangle(23, 25, 161, 149, outline="#233D5D", width=1)
         self.draw_logo(c)
-
-        c.create_text(196, 48, anchor="w", text="ATELPIX",
-                      fill=CYAN, font=("Segoe UI", 13, "bold"))
-        c.create_text(194, 83, anchor="w", text="WORLD CLOCK",
-                      fill=WHITE, font=("Segoe UI", 29, "bold"))
-        c.create_text(197, 116, anchor="w", text="One world. Every time zone.",
-                      fill=PALE, font=("Segoe UI", 11))
-        c.create_text(w-32, 47, anchor="e", text="LIVE GLOBAL TIME",
-                      fill=MUTED, font=("Segoe UI", 9, "bold"))
-        c.create_text(w-32, 78, anchor="e", text=datetime.now().strftime("%A, %d %B %Y"),
+        c.create_text(194, 42, anchor="w", text="ATELPIX  •  WORLD CLOCK",
+                      fill=CYAN, font=("Segoe UI", 10, "bold"))
+        c.create_text(192, 82, anchor="w", text="Time, beautifully connected.",
+                      fill=WHITE, font=("Segoe UI", 24, "bold"))
+        c.create_text(195, 113, anchor="w", text="A premium view of every time zone that matters.",
+                      fill=PALE, font=("Segoe UI", 10))
+        c.create_text(w-28, 45, anchor="e", text="LOCAL DATE",
+                      fill=MUTED, font=("Segoe UI", 8, "bold"))
+        c.create_text(w-28, 75, anchor="e", text=datetime.now().strftime("%A, %d %B %Y"),
                       fill=WHITE, font=("Segoe UI", 12, "bold"))
-        c.create_text(w-32, 108, anchor="e", text="OFFLINE DESKTOP EDITION",
+        c.create_text(w-28, 108, anchor="e", text="●  SYSTEM ONLINE",
                       fill=CYAN, font=("Segoe UI", 9, "bold"))
-        self.live_dot = c.create_oval(w-160, 128, w-150, 138, fill=CYAN, outline="")
-
+        self.live_dot = c.create_oval(w-146, 127, w-136, 137, fill=CYAN, outline="")
 
     def load_settings(self):
         defaults = {"logo_path": "", "logo_size": 100, "logo_align": "Center"}
@@ -287,12 +298,12 @@ class WorldClockApp:
         for child in self.grid.winfo_children():
             child.destroy()
         self.cards = []
-        self.city_count.configure(text=f"{len(self.cities)} CITIES")
+        self.city_count.configure(text=f"{len(self.cities):02d} CITIES CONNECTED")
         for i, (city, zone) in enumerate(self.cities):
-            card = tk.Frame(self.grid, bg=PANEL, highlightbackground=BORDER,
+            card = tk.Frame(self.grid, bg="#141F35", highlightbackground="#2B405F",
                             highlightthickness=1, bd=0)
             r, col = divmod(i, 3)
-            card.grid(row=r, column=col, sticky="nsew", padx=8, pady=8)
+            card.grid(row=r, column=col, sticky="nsew", padx=7, pady=7)
             self.grid.grid_columnconfigure(col, weight=1, uniform="cards")
             self.grid.grid_rowconfigure(r, weight=1, uniform="rows")
             card.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
@@ -300,42 +311,41 @@ class WorldClockApp:
 
             accent = tk.Frame(card, bg=CYAN, height=3)
             accent.pack(fill="x")
-            top = tk.Frame(card, bg=PANEL)
-            top.pack(fill="x", padx=18, pady=(14, 2))
-            top.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
-            top.bind("<Leave>", lambda e, f=card: self.card_hover(f, False))
-
-            name = tk.Label(top, text=city.upper(), bg=PANEL, fg=WHITE,
-                            font=("Segoe UI", 16, "bold"))
+            inner = tk.Frame(card, bg="#141F35")
+            inner.pack(fill="both", expand=True, padx=17, pady=13)
+            top = tk.Frame(inner, bg="#141F35")
+            top.pack(fill="x")
+            name = tk.Label(top, text=city.upper(), bg="#141F35", fg=WHITE,
+                            font=("Segoe UI", 12, "bold"))
             name.pack(side="left")
-            name.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
-            name.bind("<Leave>", lambda e, f=card: self.card_hover(f, False))
-            dot = tk.Label(top, text="●", bg=PANEL, fg=CYAN, font=("Segoe UI", 9))
-            dot.pack(side="left", padx=8)
-            dot.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
-            dot.bind("<Leave>", lambda e, f=card: self.card_hover(f, False))
-
+            dot = tk.Label(top, text="●", bg="#141F35", fg=CYAN, font=("Segoe UI", 8))
+            dot.pack(side="left", padx=7)
             if zone != "Asia/Dhaka":
-                rm = tk.Label(top, text="×", bg=PANEL, fg=MUTED,
+                rm = tk.Label(top, text="×", bg="#141F35", fg="#8091AE",
                               font=("Segoe UI", 17), cursor="hand2")
                 rm.pack(side="right")
                 rm.bind("<Button-1>", lambda e, z=zone: self.remove_city(z))
                 rm.bind("<Enter>", lambda e, x=rm: x.configure(fg=CYAN))
-                rm.bind("<Leave>", lambda e, x=rm: x.configure(fg=MUTED))
+                rm.bind("<Leave>", lambda e, x=rm: x.configure(fg="#8091AE"))
 
-            zone_label = tk.Label(card, text=zone.replace("_", " "), bg=PANEL,
-                                  fg=MUTED, font=("Segoe UI", 9))
-            zone_label.pack(anchor="w", padx=19)
-
-            clock = tk.Label(card, text="--:--:--", bg=PANEL, fg=CYAN,
-                             font=("Segoe UI", 31, "bold"))
-            clock.pack(anchor="w", padx=17, pady=(12, 0))
-            date = tk.Label(card, text="", bg=PANEL, fg=PALE,
-                            font=("Segoe UI", 10))
-            date.pack(anchor="w", padx=19, pady=(2, 9))
-            info = tk.Label(card, text="", bg=PANEL, fg=MUTED,
-                            font=("Segoe UI", 9, "bold"))
-            info.pack(anchor="w", padx=19, pady=(0, 16))
+            zone_label = tk.Label(inner, text=zone.replace("_", " ").upper(),
+                                  bg="#141F35", fg="#8192B0",
+                                  font=("Segoe UI", 8, "bold"))
+            zone_label.pack(anchor="w", pady=(4, 0))
+            clock = tk.Label(inner, text="--:--:--", bg="#141F35", fg="#55E3E6",
+                             font=("Segoe UI", 27, "bold"))
+            clock.pack(anchor="w", pady=(11, 0))
+            date = tk.Label(inner, text="", bg="#141F35", fg="#D1DCEF",
+                            font=("Segoe UI", 9))
+            date.pack(anchor="w", pady=(2, 9))
+            separator = tk.Frame(inner, bg="#293B57", height=1)
+            separator.pack(fill="x", pady=(1, 8))
+            info = tk.Label(inner, text="", bg="#141F35", fg="#9EAFCA",
+                            font=("Segoe UI", 8, "bold"))
+            info.pack(anchor="w")
+            for widget in (inner, top, name, dot, zone_label, clock, date, info):
+                widget.bind("<Enter>", lambda e, f=card: self.card_hover(f, True))
+                widget.bind("<Leave>", lambda e, f=card: self.card_hover(f, False))
             self.cards.append((zone, clock, date, info, card, accent))
 
     def card_hover(self, card, entering):
