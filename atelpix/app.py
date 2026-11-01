@@ -181,7 +181,6 @@ class App(tk.Tk):
         self.label(box3,'BACKUP LOCATION',10,TEXT,True).pack(anchor='w')
         self.label(box3,str(APP_DIR/'Backups'),8,MUTED,bg=PANEL).pack(anchor='w',pady=8)
         self.btn(box3,'OPEN DATA FOLDER',lambda:os.startfile(APP_DIR) if os.name=='nt' else messagebox.showinfo('Data folder',str(APP_DIR))).pack(anchor='w')
-\n
 
 
     # --- Missing application workflows restored in the final desktop build ---
