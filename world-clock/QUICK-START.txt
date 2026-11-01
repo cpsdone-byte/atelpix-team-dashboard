@@ -1,0 +1,10 @@
+ATELPIX WORLD CLOCK — QUICK START
+
+1. Extract this ZIP file to a folder.
+2. Double-click ATELPIX-World-Clock.exe.
+3. The app works offline. No Python or separate installation is required.
+4. Use + ADD CITY to add another time zone.
+5. Click × on a city card to remove it (Dhaka is kept as the home city).
+6. Use the format button to switch between 12-hour and 24-hour time.
+
+Your selected city list is saved on this Windows PC.
