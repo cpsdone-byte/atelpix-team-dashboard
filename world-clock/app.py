@@ -1,10 +1,12 @@
 import json
 import os
+import shutil
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, available_timezones
+from PIL import Image, ImageTk
 
 APP_NAME = "ATELPIX WORLD CLOCK"
 BG = "#0B1020"
@@ -19,6 +21,7 @@ MUTED = "#A5B2D2"
 PALE = "#C9F7F7"
 DATA_DIR = Path(os.getenv("APPDATA", str(Path.home()))) / "ATELPIX" / "WorldClock"
 DATA_FILE = DATA_DIR / "cities.json"
+SETTINGS_FILE = DATA_DIR / "settings.json"
 
 DEFAULT_CITIES = [
     ("Dhaka", "Asia/Dhaka"), ("New York", "America/New_York"),
@@ -56,6 +59,9 @@ class WorldClockApp:
         self.root.minsize(960, 690)
         self.root.configure(bg=BG)
         self.cities = load_cities()
+        self.settings = self.load_settings()
+        self.logo_photo = None
+        self.pending_logo = self.settings.get("logo_path", "")
         self.use_24h = True
         self.cards = []
         self.pulse = 0
@@ -99,6 +105,7 @@ class WorldClockApp:
         actions.pack(side="right")
         self.format_btn = self._button(actions, "24H FORMAT", self.toggle_format, BLUE)
         self.format_btn.pack(side="left", padx=(0, 10))
+        self._button(actions, "LOGO SETTINGS", self.logo_settings, PURPLE).pack(side="left", padx=(0, 10))
         self._button(actions, "+ ADD CITY", self.add_city, CYAN, True).pack(side="left")
 
         self.grid = tk.Frame(body, bg=BG)
@@ -122,11 +129,7 @@ class WorldClockApp:
         c.create_oval(w-200, -118, w+10, 92, outline="#28516A", width=1)
         c.create_line(0, 158, w, 158, fill="#26385B", width=1)
 
-        c.create_rectangle(28, 25, 166, 137, outline="#3B5A80", width=2, dash=(5, 4))
-        c.create_text(97, 72, text="YOUR LOGO", fill="#B7C7E7",
-                      font=("Segoe UI", 12, "bold"))
-        c.create_text(97, 98, text="PLACEHOLDER", fill="#7185AA",
-                      font=("Segoe UI", 7, "bold"))
+        self.draw_logo(c)
 
         c.create_text(196, 48, anchor="w", text="ATELPIX",
                       fill=CYAN, font=("Segoe UI", 13, "bold"))
@@ -141,6 +144,118 @@ class WorldClockApp:
         c.create_text(w-32, 108, anchor="e", text="OFFLINE DESKTOP EDITION",
                       fill=CYAN, font=("Segoe UI", 9, "bold"))
         self.live_dot = c.create_oval(w-160, 128, w-150, 138, fill=CYAN, outline="")
+
+
+    def load_settings(self):
+        defaults = {"logo_path": "", "logo_size": 100, "logo_align": "Center"}
+        try:
+            saved = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+            if isinstance(saved, dict):
+                defaults.update(saved)
+        except Exception:
+            pass
+        return defaults
+
+    def save_settings(self):
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        SETTINGS_FILE.write_text(json.dumps(self.settings, ensure_ascii=False, indent=2),
+                                 encoding="utf-8")
+
+    def draw_logo(self, canvas):
+        canvas.create_rectangle(28, 25, 166, 137, outline="#3B5A80", width=2)
+        path = self.settings.get("logo_path", "")
+        if path and os.path.isfile(path):
+            try:
+                with Image.open(path) as source:
+                    image = source.convert("RGBA")
+                    scale = int(self.settings.get("logo_size", 100)) / 100
+                    image.thumbnail((max(40, int(130 * scale)), max(40, int(100 * scale))),
+                                    Image.Resampling.LANCZOS)
+                    self.logo_photo = ImageTk.PhotoImage(image)
+                align = self.settings.get("logo_align", "Center")
+                x = {"Left": 28 + self.logo_photo.width() / 2,
+                     "Center": 97,
+                     "Right": 166 - self.logo_photo.width() / 2}.get(align, 97)
+                canvas.create_image(x, 81, image=self.logo_photo)
+                return
+            except Exception:
+                self.logo_photo = None
+        canvas.create_text(97, 72, text="YOUR LOGO", fill="#B7C7E7",
+                           font=("Segoe UI", 12, "bold"))
+        canvas.create_text(97, 98, text="PLACEHOLDER", fill="#7185AA",
+                           font=("Segoe UI", 7, "bold"))
+
+    def logo_settings(self):
+        win = tk.Toplevel(self.root)
+        win.title("Logo Settings")
+        win.configure(bg=BG)
+        win.geometry("500x390")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+        tk.Label(win, text="CUSTOMIZE YOUR LOGO", bg=BG, fg=WHITE,
+                 font=("Segoe UI", 17, "bold")).pack(anchor="w", padx=26, pady=(22, 5))
+        tk.Label(win, text="Choose an image, adjust its size and alignment, then save.",
+                 bg=BG, fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", padx=26, pady=(0, 18))
+        path_var = tk.StringVar(value=self.pending_logo or "No logo selected")
+        tk.Label(win, textvariable=path_var, bg=PANEL, fg=PALE, anchor="w",
+                 padx=12, pady=10, wraplength=430).pack(fill="x", padx=26)
+
+        def browse():
+            selected = filedialog.askopenfilename(
+                parent=win, title="Choose your logo",
+                filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.webp"),
+                           ("All files", "*.*")])
+            if selected:
+                self.pending_logo = selected
+                path_var.set(os.path.basename(selected))
+
+        self._button(win, "UPLOAD / CHANGE LOGO", browse, CYAN, True).pack(
+            anchor="w", padx=26, pady=(12, 18))
+        tk.Label(win, text="LOGO SIZE", bg=BG, fg=WHITE,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=26)
+        size_var = tk.IntVar(value=int(self.settings.get("logo_size", 100)))
+        ttk.Scale(win, from_=50, to=100, orient="horizontal",
+                  variable=size_var).pack(fill="x", padx=26, pady=(5, 14))
+        tk.Label(win, text="LOGO ALIGNMENT", bg=BG, fg=WHITE,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=26)
+        align_var = tk.StringVar(value=self.settings.get("logo_align", "Center"))
+        ttk.Combobox(win, textvariable=align_var, values=["Left", "Center", "Right"],
+                     state="readonly", style="Dark.TCombobox",
+                     font=("Segoe UI", 10)).pack(fill="x", padx=26, pady=(5, 18))
+        bottom = tk.Frame(win, bg=BG)
+        bottom.pack(fill="x", padx=26, pady=(0, 20))
+
+        def remove_logo():
+            self.pending_logo = ""
+            path_var.set("No logo selected")
+            self.settings["logo_path"] = ""
+            self.save_settings()
+            self.draw_header()
+
+        def save_logo():
+            chosen = self.pending_logo
+            if chosen and os.path.isfile(chosen):
+                try:
+                    with Image.open(chosen) as img:
+                        img.verify()
+                    DATA_DIR.mkdir(parents=True, exist_ok=True)
+                    ext = Path(chosen).suffix.lower() or ".png"
+                    stored = DATA_DIR / ("custom_logo" + ext)
+                    if os.path.abspath(chosen) != os.path.abspath(stored):
+                        shutil.copy2(chosen, stored)
+                    self.settings["logo_path"] = str(stored)
+                except Exception as exc:
+                    messagebox.showerror("Logo error", f"Could not use this image.\\n{exc}", parent=win)
+                    return
+            self.settings["logo_size"] = int(size_var.get())
+            self.settings["logo_align"] = align_var.get()
+            self.save_settings()
+            self.draw_header()
+            win.destroy()
+
+        self._button(bottom, "REMOVE LOGO", remove_logo, PANEL_HOVER).pack(side="left")
+        self._button(bottom, "SAVE SETTINGS", save_logo, CYAN, True).pack(side="right")
 
     def animate_header(self):
         self.pulse = (self.pulse + 1) % 40
